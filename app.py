@@ -251,6 +251,8 @@ def run_daily_simulation_logic(conn, league_id, user_team_id):
     sim_date = league_data['sim_date']
     sim_mode = league_data.get('simulation_mode', 'detailed')
 
+    print(f"Simulating with {sim_mode} mode for league {league_id} on {sim_date}")
+
     # 2. Get Games for Today
     cur.execute("""
         SELECT game_id, home_team_id, away_team_id
