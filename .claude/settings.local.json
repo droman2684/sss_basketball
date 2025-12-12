@@ -7,7 +7,8 @@
       "Bash(git push)",
       "Bash(git push:*)",
       "Bash(python check_team_abbrev.py:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(chmod:*)"
     ]
   }
 }
