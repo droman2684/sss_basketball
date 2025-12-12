@@ -179,6 +179,15 @@
                         {% endif %}
                     </div>
                 </div>
+
+                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f0f0;">
+                    <button onclick="reassignContracts()" style="width: 100%; background: #f59e0b; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600;">
+                        ⚙️ Re-assign All Contracts
+                    </button>
+                    <div style="font-size: 11px; color: #888; margin-top: 5px; text-align: center;">
+                        Redistributes salaries to fit under cap (${{ "{:,}".format(league.salary_cap|default(140000000)) }})
+                    </div>
+                </div>
             </div>
 
             <script>
@@ -190,7 +199,27 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        location.reload();  // Reload to show new mode
+                        location.reload();
+                    }
+                });
+            }
+
+            function reassignContracts() {
+                if (!confirm('This will reassign ALL player contracts in the league based on their ratings. Continue?')) {
+                    return;
+                }
+
+                fetch('/reassign_contracts/{{ league.league_id }}', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
                     }
                 });
             }

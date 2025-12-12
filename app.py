@@ -5,6 +5,7 @@ from collections import defaultdict
 import random
 from simulation import run_game_simulation
 from fast_simulation import run_fast_game_simulation
+from reassign_contracts import reassign_league_contracts
 import json
 import calendar
 import datetime
@@ -797,6 +798,26 @@ def toggle_simulation_mode(league_id):
         'new_mode': new_mode,
         'message': f"Switched to {new_mode} simulation mode"
     })
+
+@app.route('/reassign_contracts/<int:league_id>', methods=['POST'])
+def reassign_contracts_route(league_id):
+    """Reassign all player contracts to fit under salary cap"""
+    conn = get_db_connection()
+
+    result = reassign_league_contracts(conn, league_id)
+
+    conn.close()
+
+    if result['success']:
+        return jsonify({
+            'success': True,
+            'message': f"Reassigned {result['players_updated']} contracts across {result['teams_updated']} teams. Cap: ${result['salary_cap']:,}"
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'message': result.get('error', 'Unknown error')
+        })
 
 @app.route('/depth_chart', methods=['GET', 'POST'])
 def depth_chart():
