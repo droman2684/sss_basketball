@@ -365,11 +365,25 @@ def create_league():
             conn.commit()
             return redirect(url_for('league_dashboard', league_id=new_league_id))
         except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
+            print(f"CREATE LEAGUE ERROR: {error_details}")  # This will show in Render logs
             conn.rollback()
-            return f"Error: {str(e)}"
-        finally:
             cur.close()
             conn.close()
+            return f"""
+                <html><body style="font-family: Arial; padding: 20px;">
+                <h2>Error Creating League</h2>
+                <p><strong>Error:</strong> {str(e)}</p>
+                <pre style="background: #f5f5f5; padding: 15px; overflow-x: auto;">{error_details}</pre>
+                <a href="/create_league">← Back to Create League</a>
+                </body></html>
+            """, 500
+        finally:
+            if not cur.closed:
+                cur.close()
+            if not conn.closed:
+                conn.close()
 
     cur.execute("SELECT scenario_id, name FROM quick_start_scenarios")
     scenarios = cur.fetchall()
