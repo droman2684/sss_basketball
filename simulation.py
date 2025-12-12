@@ -289,16 +289,18 @@ def run_game_simulation(conn, league_id, game_id, home_team_id, away_team_id):
             # Decrease Clock
             time_remaining -= possession_time
             
-            # Log Event
-            game_log.append({
-                'game_id': game_id,
-                'quarter': q,
-                'time': f"{int(time_remaining//60)}:{int(time_remaining%60):02d}",
-                'desc': event_desc,
-                'h_score': score[home_team_id],
-                'a_score': score[away_team_id],
-                'type': 'SHOT'
-            })
+            # Log Event (only important plays to speed up simulation)
+            is_important = (is_made and shot_val >= 2) or is_foul or (abs(score[home_team_id] - score[away_team_id]) <= 5 and time_remaining < 120)
+            if is_important or len(game_log) < 10:  # Always log first 10 events + important plays
+                game_log.append({
+                    'game_id': game_id,
+                    'quarter': q,
+                    'time': f"{int(time_remaining//60)}:{int(time_remaining%60):02d}",
+                    'desc': event_desc,
+                    'h_score': score[home_team_id],
+                    'a_score': score[away_team_id],
+                    'type': 'SHOT'
+                })
 
             # Win Prob Graph
             if int(time_remaining) % 60 < 20: 
@@ -324,15 +326,19 @@ def run_game_simulation(conn, league_id, game_id, home_team_id, away_team_id):
           quarter_scores[away_team_id][0], quarter_scores[away_team_id][1], quarter_scores[away_team_id][2], quarter_scores[away_team_id][3],
           json.dumps(win_prob_log), game_id))
 
-    # Insert Box Scores
+    # Insert Box Scores (Bulk Insert for Speed)
+    box_score_data = []
     for team_id in [home_team_id, away_team_id]:
         for p in rosters[team_id]:
             s = p['stats']
             if s['min'] > 0:
-                cur.execute("""
-                    INSERT INTO league_box_scores (league_id, game_id, team_id, player_id, minutes, points, rebounds, assists, fg_made, fg_attempts, threes_made, threes_attempts, ft_made, ft_attempts, fouls)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, (league_id, game_id, team_id, p['player_id'], int(s['min']), s['pts'], s['reb'], s['ast'], s['fgm'], s['fga'], s['3pm'], s['3pa'], s['ftm'], s['fta'], s['pf']))
+                box_score_data.append((league_id, game_id, team_id, p['player_id'], int(s['min']),
+                                      s['pts'], s['reb'], s['ast'], s['fgm'], s['fga'],
+                                      s['3pm'], s['3pa'], s['ftm'], s['fta'], s['pf']))
+
+    if box_score_data:
+        args_str = ','.join(cur.mogrify("(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", x).decode('utf-8') for x in box_score_data)
+        cur.execute("INSERT INTO league_box_scores (league_id, game_id, team_id, player_id, minutes, points, rebounds, assists, fg_made, fg_attempts, threes_made, threes_attempts, ft_made, ft_attempts, fouls) VALUES " + args_str)
 
     # Insert Game Events (Bulk Insert)
     if game_log:
