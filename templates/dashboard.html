@@ -157,7 +157,44 @@
                         <button type="submit" class="btn-sim" style="background-color: #3b82f6; font-size: 14px; padding: 10px;">Sim Week</button>
                     </form>
                 </div>
+
+                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f0f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+                        <span style="color: #666;">
+                            Mode: <strong id="current-mode">{{ league.simulation_mode|default('detailed')|title }}</strong>
+                        </span>
+                        <button onclick="toggleSimMode()" style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                            {% if league.simulation_mode == 'fast' %}
+                                Switch to Detailed
+                            {% else %}
+                                Switch to Fast
+                            {% endif %}
+                        </button>
+                    </div>
+                    <div style="font-size: 11px; color: #888; margin-top: 5px;">
+                        {% if league.simulation_mode == 'fast' %}
+                            Fast mode: 10-20x faster, stats only
+                        {% else %}
+                            Detailed mode: Full play-by-play events
+                        {% endif %}
+                    </div>
+                </div>
             </div>
+
+            <script>
+            function toggleSimMode() {
+                fetch('/toggle_simulation_mode/{{ league.league_id }}', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();  // Reload to show new mode
+                    }
+                });
+            }
+            </script>
 
             <div class="game-list">
                 {% if todays_games %}

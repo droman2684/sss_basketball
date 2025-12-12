@@ -4,6 +4,7 @@ from psycopg2.extras import RealDictCursor
 from collections import defaultdict
 import random
 from simulation import run_game_simulation
+from fast_simulation import run_fast_game_simulation
 import json
 import calendar
 import datetime
@@ -242,16 +243,18 @@ def generate_smart_trades(conn, league_id, user_team_id):
 def run_daily_simulation_logic(conn, league_id, user_team_id):
     """Core logic to simulate one day and advance date"""
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    
-    # 1. Get Sim Date
-    cur.execute("SELECT sim_date FROM leagues WHERE league_id = %s", (league_id,))
-    sim_date = cur.fetchone()['sim_date']
-    
+
+    # 1. Get Sim Date and Simulation Mode
+    cur.execute("SELECT sim_date, simulation_mode FROM leagues WHERE league_id = %s", (league_id,))
+    league_data = cur.fetchone()
+    sim_date = league_data['sim_date']
+    sim_mode = league_data.get('simulation_mode', 'detailed')
+
     # 2. Get Games for Today
     cur.execute("""
-        SELECT game_id, home_team_id, away_team_id 
-        FROM league_schedule 
-        WHERE league_id = %s 
+        SELECT game_id, home_team_id, away_team_id
+        FROM league_schedule
+        WHERE league_id = %s
           AND day_of_month = EXTRACT(DAY FROM %s::date)
           AND year = EXTRACT(YEAR FROM %s::date)
           AND TRIM(month_name) = TRIM(TO_CHAR(%s::date, 'Month'))
@@ -259,10 +262,13 @@ def run_daily_simulation_logic(conn, league_id, user_team_id):
     """, (league_id, sim_date, sim_date, sim_date))
     games = cur.fetchall()
     cur.close()
-    
-    # 3. Sim Games
+
+    # 3. Sim Games (choose simulation mode)
     for g in games:
-        run_game_simulation(conn, league_id, g['game_id'], g['home_team_id'], g['away_team_id'])
+        if sim_mode == 'fast':
+            run_fast_game_simulation(conn, league_id, g['game_id'], g['home_team_id'], g['away_team_id'])
+        else:
+            run_game_simulation(conn, league_id, g['game_id'], g['home_team_id'], g['away_team_id'])
 
     # 4. AI Logic (Trades/Signings)
     update_ai_trade_logic(conn, league_id, user_team_id)
@@ -761,12 +767,36 @@ def save_strategy():
     user_team_id = session.get('user_team_id', 61)
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("UPDATE coaching_strategy SET offense_focus=%s, defense_focus=%s, bench_minutes=%s, rest_strategy=%s, training_focus=%s WHERE team_id=%s", 
+    cur.execute("UPDATE coaching_strategy SET offense_focus=%s, defense_focus=%s, bench_minutes=%s, rest_strategy=%s, training_focus=%s WHERE team_id=%s",
                 (data.get('offense_focus'), data.get('defense_focus'), data.get('bench_minutes'), data.get('rest_strategy'), data.get('training_focus'), user_team_id))
     conn.commit()
     cur.close()
     conn.close()
     return jsonify({'success': True})
+
+@app.route('/toggle_simulation_mode/<int:league_id>', methods=['POST'])
+def toggle_simulation_mode(league_id):
+    """Toggle between detailed and fast simulation modes"""
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+
+    # Get current mode
+    cur.execute("SELECT simulation_mode FROM leagues WHERE league_id = %s", (league_id,))
+    current_mode = cur.fetchone().get('simulation_mode', 'detailed')
+
+    # Toggle mode
+    new_mode = 'fast' if current_mode == 'detailed' else 'detailed'
+
+    cur.execute("UPDATE leagues SET simulation_mode = %s WHERE league_id = %s", (new_mode, league_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'new_mode': new_mode,
+        'message': f"Switched to {new_mode} simulation mode"
+    })
 
 @app.route('/depth_chart', methods=['GET', 'POST'])
 def depth_chart():
