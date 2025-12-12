@@ -4,7 +4,10 @@
       "Bash(python check_quickstart_data.py:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push)"
+      "Bash(git push)",
+      "Bash(git push:*)",
+      "Bash(python check_team_abbrev.py:*)",
+      "Bash(python:*)"
     ]
   }
 }
