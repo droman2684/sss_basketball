@@ -339,25 +339,38 @@ def create_league():
             if user_new_team_id:
                 cur.execute("UPDATE leagues SET user_team_id = %s WHERE league_id = %s", (user_new_team_id, new_league_id))
 
+            # Bulk insert players (much faster)
             cur.execute("SELECT * FROM quick_start_players WHERE qs_team_id IN (SELECT qs_team_id FROM quick_start_teams WHERE scenario_id = %s)", (scenario_id,))
             qs_players = cur.fetchall()
+
+            player_data = []
             for p in qs_players:
                 new_team_id = id_map.get(p['qs_team_id'])
                 if new_team_id:
-                    cur.execute("""
-                        INSERT INTO league_players (team_id, league_id, first_name, last_name, position, age, usage_rating, inside_shooting, outside_shooting, ft_shooting, passing, speed, guarding, stealing, blocking, rebounding, overall_rating, contract_years, salary_amount)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (new_team_id, new_league_id, p['first_name'], p['last_name'], p['position'], p['age'], p['usage_rating'], p['inside_shooting'], p['outside_shooting'], p['ft_shooting'], p['passing'], p['speed'], p['guarding'], p['stealing'], p['blocking'], p['rebounding'], p['overall_rating'], p['contract_years'], p['salary_amount']))
+                    player_data.append((new_team_id, new_league_id, p['first_name'], p['last_name'], p['position'],
+                                      p['age'], p['usage_rating'], p['inside_shooting'], p['outside_shooting'],
+                                      p['ft_shooting'], p['passing'], p['speed'], p['guarding'], p['stealing'],
+                                      p['blocking'], p['rebounding'], p['overall_rating'], p['contract_years'], p['salary_amount']))
 
+            if player_data:
+                args_str = ','.join(cur.mogrify("(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)", x).decode('utf-8') for x in player_data)
+                cur.execute("INSERT INTO league_players (team_id, league_id, first_name, last_name, position, age, usage_rating, inside_shooting, outside_shooting, ft_shooting, passing, speed, guarding, stealing, blocking, rebounding, overall_rating, contract_years, salary_amount) VALUES " + args_str)
+
+            # Bulk insert schedule (much faster)
             cur.execute("SELECT * FROM quick_start_schedule WHERE scenario_id = %s", (scenario_id,))
             qs_games = cur.fetchall()
+
+            schedule_data = []
             for g in qs_games:
                 new_home = id_map.get(g['home_qs_team_id'])
                 new_away = id_map.get(g['away_qs_team_id'])
-                cur.execute("""
-                    INSERT INTO league_schedule (league_id, week_number, day_number, day_of_week, month_name, day_of_month, year, home_team_id, away_team_id)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, (new_league_id, g['week_number'], g['day_number'], g['day_of_week'], g['month_name'], g['day_of_month'], g['year'], new_home, new_away))
+                if new_home and new_away:
+                    schedule_data.append((new_league_id, g['week_number'], g['day_number'], g['day_of_week'],
+                                        g['month_name'], g['day_of_month'], g['year'], new_home, new_away))
+
+            if schedule_data:
+                args_str = ','.join(cur.mogrify("(%s,%s,%s,%s,%s,%s,%s,%s,%s)", x).decode('utf-8') for x in schedule_data)
+                cur.execute("INSERT INTO league_schedule (league_id, week_number, day_number, day_of_week, month_name, day_of_month, year, home_team_id, away_team_id) VALUES " + args_str)
 
             if user_new_team_id:
                 cur.execute("INSERT INTO coaching_strategy (team_id) VALUES (%s)", (user_new_team_id,))
