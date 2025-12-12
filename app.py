@@ -522,24 +522,55 @@ def simulate_single_game(game_id):
 
 @app.route('/simulate_day/<int:league_id>', methods=['POST'])
 def simulate_day(league_id):
-    user_team_id = session.get('user_team_id', 61)
-    conn = get_db_connection()
-    run_daily_simulation_logic(conn, league_id, user_team_id)
-    conn.close()
-    if 'league_schedule' in request.referrer:
-        return redirect(url_for('league_schedule', league_id=league_id))
-    return redirect(url_for('league_dashboard', league_id=league_id))
+    try:
+        user_team_id = session.get('user_team_id', 61)
+        conn = get_db_connection()
+        run_daily_simulation_logic(conn, league_id, user_team_id)
+        conn.close()
+
+        # Safe redirect handling
+        if request.referrer and 'league_schedule' in request.referrer:
+            return redirect(url_for('league_schedule', league_id=league_id))
+        return redirect(url_for('league_dashboard', league_id=league_id))
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"SIMULATE DAY ERROR: {error_details}")
+        return f"""
+            <html><body style="font-family: Arial; padding: 20px;">
+            <h2>Simulation Error</h2>
+            <p><strong>Error:</strong> {str(e)}</p>
+            <pre style="background: #f5f5f5; padding: 15px; overflow-x: auto;">{error_details}</pre>
+            <a href="/dashboard/{league_id}">← Back to Dashboard</a>
+            </body></html>
+        """, 500
 
 @app.route('/simulate_week/<int:league_id>', methods=['POST'])
 def simulate_week(league_id):
-    user_team_id = session.get('user_team_id', 61)
-    conn = get_db_connection()
-    for _ in range(7):
-        run_daily_simulation_logic(conn, league_id, user_team_id)
-    conn.close()
-    if 'league_schedule' in request.referrer:
-        return redirect(url_for('league_schedule', league_id=league_id))
-    return redirect(url_for('league_dashboard', league_id=league_id))
+    try:
+        user_team_id = session.get('user_team_id', 61)
+        conn = get_db_connection()
+        for day in range(7):
+            print(f"Simulating day {day + 1}/7...")
+            run_daily_simulation_logic(conn, league_id, user_team_id)
+        conn.close()
+
+        # Safe redirect handling
+        if request.referrer and 'league_schedule' in request.referrer:
+            return redirect(url_for('league_schedule', league_id=league_id))
+        return redirect(url_for('league_dashboard', league_id=league_id))
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"SIMULATE WEEK ERROR: {error_details}")
+        return f"""
+            <html><body style="font-family: Arial; padding: 20px;">
+            <h2>Simulation Error</h2>
+            <p><strong>Error:</strong> {str(e)}</p>
+            <pre style="background: #f5f5f5; padding: 15px; overflow-x: auto;">{error_details}</pre>
+            <a href="/dashboard/{league_id}">← Back to Dashboard</a>
+            </body></html>
+        """, 500
 
 # ==========================================
 # 6. ROUTES: STATS & TEAM VIEWS
