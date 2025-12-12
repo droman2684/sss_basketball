@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Start New League{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 600px; margin: 0 auto;">
+    <div class="card-header">Create New League</div>
+    
+    <form method="POST" action="/create_league">
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display:block; font-weight:600; font-size:13px; margin-bottom:5px;">League Name</label>
+            <input type="text" name="name" required placeholder="e.g. My Dynasty" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+            <div>
+                <label style="display:block; font-weight:600; font-size:13px; margin-bottom:5px;">Quick Start</label>
+                <select name="scenario_id" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                    {% for s in scenarios %}
+                        <option value="{{ s.scenario_id }}">{{ s.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="display:block; font-weight:600; font-size:13px; margin-bottom:5px;">User Team</label>
+                <select name="user_team_id" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                    {% for t in teams %}
+                        <option value="{{ t.qs_team_id }}">{{ t.city }} {{ t.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px;">
+            <div>
+                <label style="display:block; font-weight:600; font-size:13px; margin-bottom:5px;">Playoff Teams</label>
+                <select name="playoff_teams" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                    <option value="8" selected>8 Teams</option>
+                    <option value="10">10 Teams</option>
+                </select>
+            </div>
+            <div>
+                <label style="display:block; font-weight:600; font-size:13px; margin-bottom:5px;">Salary Cap</label>
+                <select name="salary_cap" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                    <option value="150000000" selected>$150 Million</option>
+                    <option value="200000000">$200 Million</option>
+                </select>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%;">Create & Start Season</button>
+    </form>
+</div>
+{% endblock %}

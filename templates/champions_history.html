@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Champions History{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Champions History</h1>
+    <a href="/league_history/{{ league.league_id }}" class="btn" style="background:#eee;">Back to History</a>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px;">
+    {% for c in champs %}
+    <div class="card" style="text-align: center; padding: 30px;">
+        <div style="font-size: 20px; font-weight: 800; color: #d97706; margin-bottom: 15px;">{{ c.season_year }}</div>
+        <img src="{{ c.logo_url }}" style="width: 80px; height: 80px; object-fit: contain; margin-bottom: 15px;">
+        <div style="font-weight: 600; font-size: 18px;">{{ c.city }}</div>
+        <div style="font-size: 16px; color: #666;">{{ c.name }}</div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+
+{% block title %}Depth Chart & Trade Status{% endblock %}
+
+{% block content %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+
+<style>
+    /* Page Layout */
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .page-title h1 { margin: 0; font-size: 28px; color: var(--text-primary); }
+
+    .team-header {
+        background: #fff; padding: 25px; border-radius: 12px; border: 1px solid var(--border-color);
+        margin-bottom: 25px; display: flex; align-items: center; gap: 20px;
+    }
+    .team-logo { width: 60px; height: 60px; object-fit: contain; }
+    
+    /* Depth Chart List */
+    .depth-list { list-style: none; padding: 0; margin: 0; }
+    
+    .player-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        margin-bottom: 8px;
+        border-radius: 8px;
+        padding: 12px 20px;
+        display: grid;
+        grid-template-columns: 40px 2fr 150px 100px 100px; /* Adjusted columns */
+        align-items: center;
+        cursor: grab;
+        transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .player-card:active { cursor: grabbing; box-shadow: 0 5px 15px rgba(0,0,0,0.1); transform: translateY(-2px); }
+
+    /* Columns */
+    .p-rank { font-weight: 700; color: #9ca3af; font-size: 14px; }
+    .p-name { font-weight: 600; font-size: 15px; color: var(--text-primary); }
+    .p-pos { color: #6b7280; font-size: 13px; font-weight: 500; margin-left: 5px; }
+    
+    /* Dynamic Role Styling (Visual only) */
+    .depth-list li:nth-child(-n+5) .player-card { border-left: 5px solid #10b981; } /* Starters */
+    .depth-list li:nth-child(n+6):nth-child(-n+10) .player-card { border-left: 5px solid #3b82f6; } /* Bench */
+    .depth-list li:nth-child(n+11) .player-card { border-left: 5px solid #e5e7eb; opacity: 0.75; } /* Reserves */
+
+    /* Rating Badge */
+    .rating-box { font-weight: 700; padding: 3px 8px; border-radius: 4px; font-size: 13px; color: white; display:inline-block; }
+    .r-A { background-color: #10b981; } .r-B { background-color: #3b82f6; } 
+    .r-C { background-color: #f59e0b; } .r-D { background-color: #ef4444; }
+
+    /* --- TRADE STATUS TOGGLES --- */
+    .status-toggles { display: flex; gap: 8px; align-items: center; }
+    
+    .status-btn { 
+        width: 28px; height: 28px; border-radius: 50%; border: 2px solid #e5e7eb; 
+        cursor: pointer; font-size: 12px; font-weight: 700; color: #fff; 
+        padding: 0; display: flex; justify-content: center; align-items: center;
+        opacity: 0.3; transition: all 0.2s ease;
+    }
+    
+    .status-btn:hover { opacity: 0.8; transform: scale(1.1); }
+    .status-btn.active { opacity: 1; border-color: #333; box-shadow: 0 2px 5px rgba(0,0,0,0.15); transform: scale(1.1); }
+    
+    .btn-green { background-color: #10b981; } /* Trading Block */
+    .btn-yellow { background-color: #f59e0b; } /* Listening */
+    .btn-red { background-color: #ef4444; }    /* Untouchable */
+
+    /* Save Bar */
+    .save-bar {
+        background: #fff; border-top: 1px solid #e5e7eb; padding: 15px 30px;
+        position: sticky; bottom: 0; display: flex; justify-content: space-between; align-items: center;
+        box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05); margin-top: 20px;
+        border-radius: 12px;
+    }
+</style>
+
+<div class="page-header">
+    <div class="page-title">
+        <h1>Team Strategy</h1>
+        <div style="color:var(--text-secondary); font-size:14px;">Drag to set Rotation | Set Trade Availability</div>
+    </div>
+</div>
+
+<div class="team-header">
+    <img src="{{ team.logo_url }}" alt="Logo" class="team-logo">
+    <div>
+        <h2 style="margin:0;">{{ team.city }} {{ team.name }}</h2>
+        <div style="color:#666; font-size:14px;">Depth Chart & Trade Block</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <span>Current Rotation</span>
+        <span style="font-size:12px; font-weight:normal; color:#666;">Top 5 = Starters | 6-10 = Rotation</span>
+    </div>
+    
+    <ul id="rosterList" class="depth-list">
+        {% for p in roster %}
+        <li data-id="{{ p.player_id }}">
+            <div class="player-card">
+                <div class="p-rank">{{ loop.index }}</div>
+                
+                <div class="p-name">
+                    {{ p.first_name }} {{ p.last_name }}
+                    <span class="p-pos">({{ p.position }})</span>
+                    <div style="font-size:11px; color:#888; font-weight:normal;">
+                        ${{ "{:,.1f}".format(p.salary_amount/1000000) }}M / {{ p.contract_years }} yrs
+                    </div>
+                </div>
+
+                <div class="status-toggles">
+                    <button onclick="setStatus({{ p.player_id }}, 'green')" 
+                            class="status-btn btn-green {% if p.trade_status == 'green' %}active{% endif %}" 
+                            title="On the Block (Eager to Trade)">$</button>
+                    
+                    <button onclick="setStatus({{ p.player_id }}, 'yellow')" 
+                            class="status-btn btn-yellow {% if p.trade_status == 'yellow' or not p.trade_status %}active{% endif %}" 
+                            title="Listening (Neutral)">-</button>
+                    
+                    <button onclick="setStatus({{ p.player_id }}, 'red')" 
+                            class="status-btn btn-red {% if p.trade_status == 'red' %}active{% endif %}" 
+                            title="Untouchable (Will Not Trade)">✕</button>
+                </div>
+
+                <div>
+                    <span class="rating-box {% if p.overall_rating >= 90 %}r-A{% elif p.overall_rating >= 80 %}r-B{% elif p.overall_rating >= 70 %}r-C{% else %}r-D{% endif %}">
+                        {{ p.overall_rating }} OVR
+                    </span>
+                </div>
+
+                <div style="font-size:13px; color:#666; text-align:right;">
+                    Age: {{ p.age }}
+                </div>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+
+<div class="save-bar">
+    <div style="font-size:13px; color:#666;">
+        <span style="display:inline-block; width:10px; height:10px; background:#10b981; margin-right:5px; border-radius:2px;"></span> Starters
+        <span style="display:inline-block; width:10px; height:10px; background:#3b82f6; margin-left:15px; margin-right:5px; border-radius:2px;"></span> Bench
+        <span style="display:inline-block; width:10px; height:10px; background:#e5e7eb; margin-left:15px; margin-right:5px; border-radius:2px;"></span> Reserves
+    </div>
+
+    <div>
+        <span id="saveStatus" style="margin-right:15px; font-weight:600; color:#059669; display:none;">
+            ✓ Changes Saved!
+        </span>
+        <button onclick="saveRotation()" class="btn btn-primary" style="padding: 10px 30px;">
+            Save Rotation Order
+        </button>
+    </div>
+</div>
+
+<script>
+    // Initialize Drag and Drop
+    var el = document.getElementById('rosterList');
+    var sortable = Sortable.create(el, {
+        animation: 150,
+        ghostClass: 'blue-background-class',
+        onEnd: function (evt) {
+            updateRanks(); 
+        }
+    });
+
+    function updateRanks() {
+        const items = document.querySelectorAll('#rosterList li');
+        items.forEach((item, index) => {
+            item.querySelector('.p-rank').textContent = index + 1;
+        });
+    }
+
+    // Function 1: Save the Physical Order (Rotation)
+    function saveRotation() {
+        const btn = document.querySelector('.btn-primary');
+        const status = document.getElementById('saveStatus');
+        
+        btn.textContent = "Saving...";
+        btn.disabled = true;
+
+        const order = sortable.toArray(); // Returns array of data-id
+
+        fetch('/depth_chart', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ player_ids: order })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                status.style.display = 'inline';
+                setTimeout(() => { status.style.display = 'none'; }, 2000);
+            } else {
+                alert("Error saving: " + data.error);
+            }
+        })
+        .finally(() => {
+            btn.textContent = "Save Rotation Order";
+            btn.disabled = false;
+        });
+    }
+
+    // Function 2: Set Trade Status (Instant Save)
+    function setStatus(playerId, status) {
+        // Visual Update
+        const row = document.querySelector(`li[data-id="${playerId}"]`);
+        row.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
+        row.querySelector(`.btn-${status}`).classList.add('active');
+
+        // Backend Update
+        fetch('/update_trade_status', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ player_id: playerId, status: status })
+        })
+        .then(res => res.json())
+        .then(data => {
+            console.log("Status updated for player " + playerId);
+        });
+    }
+</script>
+{% endblock %}

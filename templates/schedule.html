@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+
+{% block title %}Schedule - {{ league.name }}{% endblock %}
+
+{% block content %}
+<style>
+    /* Page Header Area */
+    .schedule-header {
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        margin-bottom: 25px;
+        background: #fff;
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .schedule-header h1 { margin: 0; font-size: 24px; }
+    .current-date-display { font-size: 14px; color: var(--text-secondary); margin-top: 5px; }
+
+    /* Month Section Styling */
+    .month-section { margin-bottom: 40px; }
+    .month-header { 
+        font-size: 18px; font-weight: 700; color: var(--text-primary); 
+        border-bottom: 2px solid var(--border-color); 
+        padding-bottom: 10px; margin-bottom: 15px; 
+        position: sticky; top: 70px; background: var(--bg-color); 
+        z-index: 90; /* Just below the top nav */
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Grid Layout */
+    .schedule-grid { 
+        display: grid; 
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
+        gap: 20px; 
+    }
+    
+    /* Game Card Styling */
+    .game-card { 
+        background: #fff; border: 1px solid var(--border-color); border-radius: 10px; padding: 15px; 
+        display: flex; flex-direction: column; justify-content: center;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .game-card:hover { 
+        transform: translateY(-3px); 
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        border-color: var(--accent); 
+    }
+    
+    /* Game Card Header */
+    .game-meta { 
+        font-size: 11px; text-transform: uppercase; color: #888; margin-bottom: 12px; 
+        letter-spacing: 0.5px; font-weight: 600; display: flex; justify-content: space-between; align-items: center;
+    }
+    
+    /* Team Rows */
+    .team-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 15px; }
+    .team-name { display: flex; align-items: center; gap: 8px; }
+    .team-abv { font-weight: 700; color: var(--text-primary); width: 35px; }
+    .team-city { color: var(--text-secondary); font-size: 13px; }
+    .team-logo-schedule { width: 24px; height: 24px; object-fit: contain; } /* New Logo Class */
+    
+    .score { font-family: 'Courier New', monospace; font-weight: 700; font-size: 16px; color: var(--text-primary); }
+    .winner .team-abv { color: var(--accent); }
+    .winner .score { color: var(--accent); }
+    
+    /* Badges & Buttons */
+    .badge-today { background: #d1fae5; color: #065f46; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; }
+    
+    .action-area { margin-top: 12px; border-top: 1px solid #f0f0f0; padding-top: 12px; text-align: center; }
+    
+    .btn-sim-game { 
+        background-color: var(--accent); color: white; border: none; padding: 8px 0; 
+        width: 100%; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s; 
+    }
+    .btn-sim-game:hover { background-color: var(--accent-hover); }
+    
+    .box-link { 
+        color: var(--text-secondary); font-size: 13px; font-weight: 500; text-decoration: none; 
+        display: block; padding: 5px; border-radius: 4px; 
+    }
+    .box-link:hover { background-color: #f3f4f6; color: var(--text-primary); }
+
+    /* Scroll Anchor Offset for Sticky Headers */
+    .anchor { scroll-margin-top: 180px; } 
+</style>
+
+<div class="schedule-header">
+    <div>
+        <h1>Season Schedule</h1>
+        <div class="current-date-display">Current Date: <strong>{{ league.sim_date }}</strong></div>
+    </div>
+    
+    <form action="/simulate_day/{{ league.league_id }}" method="POST">
+        <button type="submit" class="btn btn-success">
+            Simulate Remainder of Day &rarr;
+        </button>
+    </form>
+</div>
+
+{% for month_key, games in schedule_by_month.items() %}
+    <div class="month-section">
+        <div class="month-header">{{ month_key }}</div>
+        
+        <div class="schedule-grid">
+            {% for g in games %}
+                {% set is_today = (g.day_of_month == league.sim_date.day and g.month_name.strip() == league.sim_date.strftime('%B') and g.year == league.sim_date.year) %}
+                
+                <div class="game-card {{ 'anchor' if g.is_today else '' }}" 
+                     id="{{ 'current-game' if g.is_today else '' }}">
+                    
+                    <div class="game-meta">
+                        <span>{{ g.day_of_week }} {{ g.day_of_month }}</span>
+                        {% if g.is_today %}
+                            <span class="badge-today">TODAY</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="team-row {{ 'winner' if g.is_played and g.away_score > g.home_score else '' }}">
+                        <div class="team-name">
+                            <img src="{{ g.away_logo }}" class="team-logo-schedule" alt="{{ g.away_abv }}">
+                            <span class="team-abv">{{ g.away_abv }}</span>
+                            <span class="team-city">{{ g.away_name }}</span>
+                        </div>
+                        {% if g.is_played %}<span class="score">{{ g.away_score }}</span>{% endif %}
+                    </div>
+
+                    <div class="team-row {{ 'winner' if g.is_played and g.home_score > g.away_score else '' }}">
+                        <div class="team-name">
+                            <img src="{{ g.home_logo }}" class="team-logo-schedule" alt="{{ g.home_abv }}">
+                            <span class="team-abv">{{ g.home_abv }}</span>
+                            <span class="team-city">{{ g.home_name }}</span>
+                        </div>
+                        {% if g.is_played %}<span class="score">{{ g.home_score }}</span>{% endif %}
+                    </div>
+
+                    <div class="action-area">
+                        {% if g.is_played %}
+                            <a href="/boxscore/{{ g.game_id }}" class="box-link">View Box Score</a>
+                        
+                        {% elif g.is_today %}
+                            <form action="/simulate_game/{{ g.game_id }}" method="POST">
+                                <button type="submit" class="btn-sim-game">Simulate Game</button>
+                            </form>
+                        
+                        {% else %}
+                            <span style="font-size:12px; color:#ccc; font-weight:500;">
+                                {{ g.status_label }}
+                            </span>
+                        {% endif %}
+                    </div>
+
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endfor %}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var today = document.querySelector("#current-game");
+        if(today) {
+            today.scrollIntoView({behavior: "smooth", block: "center"});
+        }
+    });
+</script>
+
+{% endblock %}

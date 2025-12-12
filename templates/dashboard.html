@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ league.name }} - Dashboard{% endblock %}
+
+{% block content %}
+<style>
+    /* Dashboard Layout */
+    .dashboard-container { 
+        display: flex; 
+        gap: 25px; 
+        height: 100%;
+    }
+    
+    /* Left Panel: Standings */
+    .panel-standings {
+        flex: 2; /* Takes up ~66% of the content area */
+        background-color: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden; /* Header stays, body scrolls */
+    }
+    
+    .panel-header {
+        padding: 15px 20px;
+        border-bottom: 1px solid var(--border-color);
+        background: #f9fafb;
+        font-weight: 700;
+        color: var(--text-primary);
+        font-size: 16px;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+
+    .standings-scroll-area {
+        overflow-y: auto;
+        padding: 0 20px 20px 20px;
+    }
+
+    /* Right Panel: Schedule & Sim */
+    .panel-schedule {
+        flex: 1; /* Takes up ~33% of the content area */
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    /* Schedule Card */
+    .schedule-card {
+        background-color: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 20px;
+        flex-grow: 1; /* Fills height */
+        display: flex; flex-direction: column;
+        overflow: hidden;
+    }
+
+    /* Game List Styling */
+    .game-list { overflow-y: auto; flex-grow: 1; padding-right: 5px; }
+    
+    .game-row { 
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px;
+    }
+    .game-row:last-child { border-bottom: none; }
+    
+    .team-block { display: flex; align-items: center; gap: 8px; width: 40%; }
+    .team-logo-sm { width: 24px; height: 24px; object-fit: contain; }
+    .score-block { font-weight: 700; font-family: monospace; font-size: 14px; width: 20%; text-align: center; }
+    
+    /* Tables */
+    .conf-divider { 
+        margin-top: 20px; 
+        padding: 8px; 
+        background: #f3f4f6; 
+        color: var(--text-secondary); 
+        font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+        border-radius: 6px;
+    }
+    
+    .dash-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+    .dash-table th { text-align: center; color: var(--text-secondary); font-size: 11px; padding-bottom: 8px; border-bottom: 2px solid #eee; }
+    .dash-table th:first-child { text-align: left; }
+    .dash-table td { padding: 10px 5px; border-bottom: 1px solid #f5f5f5; text-align: center; }
+    .dash-table td:first-child { text-align: left; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+    
+    .user-row { background-color: #eff6ff; }
+    .user-row td:first-child { color: var(--accent); font-weight: 700; }
+
+    /* Sim Button Area */
+    .sim-footer { margin-top: auto; padding-top: 15px; border-top: 1px solid #eee; }
+    .btn-sim { 
+        background-color: var(--success); color: white; border: none; 
+        width: 100%; padding: 12px; border-radius: 8px; 
+        font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s; 
+        box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
+    }
+    .btn-sim:hover { background-color: #059669; transform: translateY(-1px); }
+</style>
+
+<div class="dashboard-container">
+
+    <div class="panel-standings">
+        <div class="panel-header">
+            <span>League Standings</span>
+            <a href="/standings/{{ league.league_id }}" style="font-size:12px; color:var(--accent); font-weight:500;">View Full &rarr;</a>
+        </div>
+        
+        <div class="standings-scroll-area">
+            {% for conf, divisions in standings.items() %}
+                <div class="conf-divider">{{ conf }}ern Conference</div>
+                
+                {% for div_name, teams in divisions.items() %}
+                    <h5 style="margin:15px 0 5px; color:#999; font-size:11px; text-transform:uppercase;">{{ div_name }}</h5>
+                    <table class="dash-table">
+                        <thead>
+                            <tr><th>Team</th><th>W</th><th>L</th><th>GB</th><th>Strk</th><th>L5</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for t in teams %}
+                            <tr class="{{ 'user-row' if t.is_user else '' }}">
+                                <td>
+                                    <img src="{{ t.logo_url }}" class="team-logo-sm">
+                                    <a href="/team/{{ t.team_id }}" style="text-decoration:none; color:inherit;">
+                                        {{ t.city }} {{ t.name }}
+                                    </a>
+                                </td>
+                                <td>{{ t.wins }}</td>
+                                <td>{{ t.losses }}</td>
+                                <td style="color:#888;">{{ t.gb if t.gb > 0 else '-' }}</td>
+                                <td>{{ t.streak_display }}</td>
+                                <td>{{ t.l5 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+
+<div class="panel-schedule">
+        
+        <div class="schedule-card">
+            <div style="border-bottom: 1px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 15px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                    <span style="font-weight:700; font-size:15px;">Today's Games</span>
+                    <span style="font-size:12px; background:#f3f4f6; padding:4px 8px; border-radius:4px; color:#555;">{{ league.sim_date }}</span>
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <form action="/simulate_day/{{ league.league_id }}" method="POST" style="flex: 1;">
+                        <button type="submit" class="btn-sim" style="font-size: 14px; padding: 10px;">Sim Day</button>
+                    </form>
+                    <form action="/simulate_week/{{ league.league_id }}" method="POST" style="flex: 1;">
+                        <button type="submit" class="btn-sim" style="background-color: #3b82f6; font-size: 14px; padding: 10px;">Sim Week</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="game-list">
+                {% if todays_games %}
+                    {% for g in todays_games %}
+                    <div class="game-row">
+                        <div class="team-block" style="justify-content: flex-end;">
+                            <span style="font-weight:600;">{{ g.away_name }}</span>
+                            <img src="{{ g.away_logo }}" class="team-logo-sm" alt="{{ g.away_abv }}">
+                        </div>
+                        
+                        <div class="score-block">
+                            {% if g.is_played %}
+                                <a href="/boxscore/{{ g.game_id }}" style="text-decoration:none; color:var(--accent);">
+                                    {{ g.away_score }}-{{ g.home_score }}
+                                </a>
+                            {% else %}
+                                <span style="color:#ccc; font-weight:400; font-size:12px;">@</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="team-block" style="justify-content: flex-start;">
+                            <img src="{{ g.home_logo }}" class="team-logo-sm" alt="{{ g.home_abv }}">
+                            <span style="font-weight:600;">{{ g.home_name }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="text-align:center; color:#999; padding:30px 0;">No games scheduled.</div>
+                {% endif %}
+            </div>
+            
+            </div>
+
+        <div style="background:#fff; border:1px solid var(--border-color); border-radius:12px; padding:20px;">
+            <div style="font-weight:700; font-size:14px; margin-bottom:10px; color:var(--text-secondary);">LEAGUE NEWS</div>
+            <div style="font-size:13px; color:#444;">
+                <p style="margin:0;">The <strong>{{ league.season_year }}</strong> season has officially begun!</p>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

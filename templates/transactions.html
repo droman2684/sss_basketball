@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}League Transactions{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Transaction Log</h1>
+</div>
+
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Team</th>
+                <th>Type</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in transactions %}
+            <tr>
+                <td style="color:#666; font-size:12px;">{{ t.date_fmt }}</td>
+                <td>
+                    <img src="{{ t.logo_url }}" style="height:24px; vertical-align:middle; margin-right:5px;">
+                    <strong>{{ t.abbrev }}</strong>
+                </td>
+                <td>
+                    <span style="padding:3px 8px; border-radius:4px; font-size:11px; font-weight:bold; color:white; background:
+                        {% if t.transaction_type == 'signing' %}#10b981
+                        {% elif t.transaction_type == 'trade' %}#3b82f6
+                        {% else %}#6b7280{% endif %};">
+                        {{ t.transaction_type|upper }}
+                    </span>
+                </td>
+                <td>{{ t.description }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

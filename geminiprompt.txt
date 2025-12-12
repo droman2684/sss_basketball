@@ -1,0 +1,37 @@
+I am building a Basketball GM Simulation game using Python (Flask), PostgreSQL, and HTML/CSS. I need you to act as my co-developer. Here is the current state of the project. Please ingest this context so we can continue coding immediately.
+
+### 1. THE STACK
+- Backend: Python (Flask), Psycopg2 (using RealDictCursor).
+- Database: PostgreSQL.
+- Frontend: HTML/Jinja2 (using a base.html layout).
+
+### 2. THE DATABASE SCHEMA
+We have "Quick Start" tables (templates) and "League" tables (active save files).
+- leagues: league_id, name, scenario_source_id, playoff_teams_per_conf, salary_cap, user_team_id, sim_date (DATE).
+- league_teams: team_id, league_id, city, name, abbrev, conference, division, wins, losses, streak_type, streak_length.
+- league_players: player_id, team_id, league_id, first_name, last_name, position, age, overall_rating, contract_years, salary_amount (NUMERIC).
+  Ratings: usage_rating, inside_shooting, outside_shooting, ft_shooting, passing, speed, guarding, rebounding.
+- league_schedule: game_id, league_id, date fields (day, month, year), home_team_id, away_team_id, home_score, away_score, is_played (BOOLEAN).
+- league_box_scores: box_id, game_id, player_id, minutes, points, rebounds, assists, steals, blocks, turnovers, fouls, fg/3pt/ft made/attempts.
+- league_game_events: Play-by-play logs (time_remaining, description, score).
+
+### 3. KEY FILES & LOGIC
+- app.py: Main Flask app.
+  - Routes: /, /create_league, /dashboard/<id>, /standings/<id>, /league_schedule/<id>, /team/<id>, /boxscore/<id>.
+  - Logic: 'simulate_day' advances the 'sim_date' in the leagues table.
+  - Helper: 'get_team_logo(abbrev)' maps codes (like BK, UT) to ESPN CDN logos (bkn, utah).
+- simulation.py:
+  - Contains 'run_game_simulation()'.
+  - Logic: Possession-based engine. Iterates 12 mins x 4 quarters. Calculates shots based on Usage vs Defense. Handles fouls, free throws, and fouling out (6 PF). Updates 'league_box_scores' and 'league_game_events'.
+
+### 4. CURRENT STATUS
+- We have a working Dashboard with a 3-column layout (Standings, Schedule, Menu).
+- We can simulate individual games or full days.
+- We have Box Scores with Quarter summaries, Player Stats, and Play-by-Play.
+- Team pages show rosters sorted by VAA (Value Above Average) and salaries.
+
+### 5. NEXT STEPS
+We are ready to start building:
+1. Team Management (Depth Chart / Rotation setting).
+2. Transactions (Trade Machine, Free Agency).
+3. Playoffs logic.

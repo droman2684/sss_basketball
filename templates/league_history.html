@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block title %}League History{% endblock %}
+{% block content %}
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:center;">
+    <h1>League History</h1>
+    <a href="/champions_history/{{ league.league_id }}" class="btn btn-primary">Champions List</a>
+</div>
+
+<div class="card" style="margin-bottom: 20px; padding: 15px; background: #f9fafb; display: flex; align-items: center; gap: 15px;">
+    <strong>Select Season:</strong>
+    <select onchange="window.location.href='/league_history/{{ league.league_id }}?year='+this.value" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd;">
+        {% for s in seasons %}
+            <option value="{{ s.season_year }}" {% if s.season_year == selected_year %}selected{% endif %}>{{ s.season_year }} Season</option>
+        {% endfor %}
+    </select>
+</div>
+
+{% if champion %}
+<div style="background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb; margin-bottom: 30px; display: flex; align-items: center; gap: 20px;">
+    <img src="https://cdn.nba.com/manage/2021/10/Larry-O-Brien-Trophy-iso.png" style="height: 80px;">
+    <div>
+        <div style="color: #666; font-size: 13px; text-transform: uppercase; font-weight: 700;">{{ selected_year }} Champion</div>
+        <div style="font-size: 24px; font-weight: 700;">
+            <img src="{{ champion.logo_url }}" style="width: 30px; vertical-align: middle; margin-right: 10px;">
+            {{ champion.city }} {{ champion.name }}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+    <div>
+        <h3 style="border-bottom: 2px solid #eee; padding-bottom: 10px;">Eastern Conference</h3>
+        <table class="dash-table">
+            <thead><tr><th>Team</th><th>W</th><th>L</th></tr></thead>
+            <tbody>
+                {% for t in standings.East %}
+                <tr>
+                    <td><img src="{{ t.logo_url }}" style="width:20px; vertical-align:middle; margin-right:5px;"> {{ t.name }}</td>
+                    <td>{{ t.wins }}</td>
+                    <td>{{ t.losses }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div>
+        <h3 style="border-bottom: 2px solid #eee; padding-bottom: 10px;">Western Conference</h3>
+        <table class="dash-table">
+            <thead><tr><th>Team</th><th>W</th><th>L</th></tr></thead>
+            <tbody>
+                {% for t in standings.West %}
+                <tr>
+                    <td><img src="{{ t.logo_url }}" style="width:20px; vertical-align:middle; margin-right:5px;"> {{ t.name }}</td>
+                    <td>{{ t.wins }}</td>
+                    <td>{{ t.losses }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

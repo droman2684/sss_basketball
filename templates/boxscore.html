@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+
+{% block title %}Box Score: {{ game.away_abv }} @ {{ game.home_abv }}{% endblock %}
+
+{% block content %}
+<style>
+    /* Score Banner */
+    .score-banner { 
+        display: flex; justify-content: space-between; align-items: center; 
+        background: #fff; padding: 25px; border-radius: 12px; 
+        margin-bottom: 25px; border: 1px solid var(--border-color); 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .team-info { text-align: center; width: 200px; }
+    .team-name { font-size: 20px; color: var(--text-secondary); margin-bottom: 5px; font-weight: 500; }
+    .team-score { font-size: 48px; font-weight: 700; color: var(--text-primary); line-height: 1; }
+    
+    /* Quarter Table */
+    .quarter-table { border-collapse: collapse; margin: 0 20px; font-size: 14px; }
+    .quarter-table th { color: var(--text-secondary); font-weight: 600; padding: 5px 12px; border-bottom: 1px solid #eee; text-align: center; }
+    .quarter-table td { padding: 8px 12px; border-bottom: 1px solid #eee; text-align: center; color: var(--text-primary); }
+    .quarter-table .total { font-weight: 700; background-color: #f9fafb; }
+
+    /* Grid Layout for Stats/PBP */
+    .box-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; }
+    
+    /* Stats Table */
+    .stats-card { background: #fff; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; margin-bottom: 20px; }
+    .stats-header { background: #f9fafb; padding: 12px 20px; font-weight: 600; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+    .stats-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .stats-table th { text-align: right; padding: 10px 15px; color: var(--text-secondary); font-weight: 600; background: #fff; border-bottom: 1px solid #eee; }
+    .stats-table td { text-align: right; padding: 10px 15px; border-bottom: 1px solid #eee; }
+    .stats-table td:first-child, .stats-table th:first-child { text-align: left; }
+    .stats-table tr:last-child td { border-bottom: none; }
+
+    /* Play-by-Play */
+    .pbp-container { height: 600px; overflow-y: auto; background: #fff; padding: 0; }
+    .pbp-row { 
+        padding: 10px 15px; border-bottom: 1px solid #f0f0f0; font-size: 13px; 
+        display: flex; gap: 10px; align-items: flex-start; 
+    }
+    .pbp-time { font-weight: 700; color: var(--accent); min-width: 60px; font-size: 12px; }
+    .pbp-desc { flex-grow: 1; color: var(--text-primary); }
+    .pbp-score { font-weight: 600; color: var(--text-secondary); min-width: 50px; text-align: right; }
+    .pbp-row:nth-child(even) { background-color: #fcfcfc; }
+</style>
+
+<div class="score-banner">
+    <div class="team-info">
+        <img src="{{ game.away_logo }}" alt="{{ game.away_abv }}" style="width: 80px; height: 80px; object-fit: contain; margin-bottom: 10px;">
+        <div class="team-name">{{ game.away_city }}</div>
+        <div class="team-score">{{ game.away_score }}</div>
+    </div>
+    
+    <div>
+        <table class="quarter-table">
+            <thead>
+                <tr>
+                    <th></th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>T</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="text-align:left; font-weight:600;">{{ game.away_abv }}</td>
+                    <td>{{ game.away_q1 }}</td><td>{{ game.away_q2 }}</td><td>{{ game.away_q3 }}</td><td>{{ game.away_q4 }}</td>
+                    <td class="total">{{ game.away_score }}</td>
+                </tr>
+                <tr>
+                    <td style="text-align:left; font-weight:600;">{{ game.home_abv }}</td>
+                    <td>{{ game.home_q1 }}</td><td>{{ game.home_q2 }}</td><td>{{ game.home_q3 }}</td><td>{{ game.home_q4 }}</td>
+                    <td class="total">{{ game.home_score }}</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div style="margin-top:15px; height: 40px; background: #f3f4f6; border-radius: 4px; position: relative; overflow:hidden;">
+            <div style="width: 100%; height: 100%; display:flex; align-items:center; justify-content:center; color:#999; font-size:11px;">Win Probability Graph</div>
+        </div>
+    </div>
+
+    <div class="team-info">
+        <img src="{{ game.home_logo }}" alt="{{ game.home_abv }}" style="width: 80px; height: 80px; object-fit: contain; margin-bottom: 10px;">
+        <div class="team-name">{{ game.home_city }}</div>
+        <div class="team-score">{{ game.home_score }}</div>
+    </div>
+</div>
+
+<div class="box-grid">
+    
+    <div>
+        <div class="stats-card">
+            <div class="stats-header">
+                <span>{{ game.away_city }} {{ game.away_name }}</span>
+            </div>
+            <table class="stats-table">
+                <thead>
+                    <tr><th>Player</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>PF</th><th>FG</th><th>3PT</th><th>FT</th></tr>
+                </thead>
+                <tbody>
+                    {% for p in away_stats %}
+                    <tr>
+                        <td><strong>{{ p.last_name }}</strong>, {{ p.first_name|first }}.</td>
+                        <td>{{ p.minutes }}</td>
+                        <td style="font-weight:bold; color:var(--text-primary);">{{ p.points }}</td>
+                        <td>{{ p.rebounds }}</td>
+                        <td>{{ p.assists }}</td>
+                        <td>{{ p.fouls }}</td>
+                        <td>{{ p.fg_made }}-{{ p.fg_attempts }}</td>
+                        <td>{{ p.threes_made }}-{{ p.threes_attempts }}</td>
+                        <td>{{ p.ft_made }}-{{ p.ft_attempts }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="stats-card">
+            <div class="stats-header">
+                <span>{{ game.home_city }} {{ game.home_name }}</span>
+            </div>
+            <table class="stats-table">
+                <thead>
+                    <tr><th>Player</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>PF</th><th>FG</th><th>3PT</th><th>FT</th></tr>
+                </thead>
+                <tbody>
+                    {% for p in home_stats %}
+                    <tr>
+                        <td><strong>{{ p.last_name }}</strong>, {{ p.first_name|first }}.</td>
+                        <td>{{ p.minutes }}</td>
+                        <td style="font-weight:bold; color:var(--text-primary);">{{ p.points }}</td>
+                        <td>{{ p.rebounds }}</td>
+                        <td>{{ p.assists }}</td>
+                        <td>{{ p.fouls }}</td>
+                        <td>{{ p.fg_made }}-{{ p.fg_attempts }}</td>
+                        <td>{{ p.threes_made }}-{{ p.threes_attempts }}</td>
+                        <td>{{ p.ft_made }}-{{ p.ft_attempts }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div>
+        <div class="stats-card">
+            <div class="stats-header">Game Log</div>
+            <div class="pbp-container">
+                {% for e in pbp %}
+                <div class="pbp-row">
+                    <div class="pbp-time">Q{{ e.quarter }} {{ e.time_remaining }}</div>
+                    <div class="pbp-desc">{{ e.description }}</div>
+                    <div class="pbp-score">{{ e.score_away }}-{{ e.score_home }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block title %}Team Stats{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+
+<style>
+    .team-header {
+        background: #fff; padding: 25px; border-radius: 12px; border: 1px solid var(--border-color);
+        margin-bottom: 25px; display: flex; align-items: center; gap: 20px;
+    }
+    .team-logo { width: 60px; height: 60px; object-fit: contain; }
+    .stat-page-title h1 { margin: 0; font-size: 24px; color: var(--text-primary); }
+    
+    /* Good/Bad colors for Percentages */
+    .pct-good { color: #059669; font-weight: 700; } /* Green */
+    .pct-mid  { color: #d97706; } /* Orange */
+    .pct-bad  { color: #dc2626; } /* Red */
+</style>
+
+<div class="team-header">
+    <img src="{{ team.logo_url }}" alt="Logo" class="team-logo">
+    <div class="stat-page-title">
+        <h1>{{ team.city }} {{ team.name }} Stats</h1>
+        
+        <div style="font-size: 18px; color: var(--text-secondary); margin-top: 4px; font-weight: 500;">
+            Record: <span style="color:var(--text-primary); font-weight:700;">{{ team.wins }}-{{ team.losses }}</span>
+            <span style="margin: 0 10px; color: #ddd;">|</span>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Player Statistics</div>
+    <div style="overflow-x: auto;">
+        <table id="statsTable" class="table table-striped table-hover" style="width:100%">
+            <thead>
+                <tr>
+                    <th>Player</th>
+                    <th>Pos</th>
+                    <th>GP</th>
+                    <th>MIN</th>
+                    <th>PTS</th>
+                    <th>REB</th>
+                    <th>AST</th>
+                    <th>STL</th>
+                    <th>BLK</th>
+                    <th>TOV</th>
+                    <th>FG%</th>
+                    <th>3P%</th>
+                    <th>FT%</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in stats %}
+                <tr>
+                    <td><strong>{{ p.last_name }}</strong>, {{ p.first_name }}</td>
+                    <td>{{ p.position }}</td>
+                    <td>{{ p.gp }}</td>
+                    <td>{{ p.mpg }}</td>
+                    <td style="font-weight:700;">{{ p.ppg }}</td>
+                    <td>{{ p.rpg }}</td>
+                    <td>{{ p.apg }}</td>
+                    <td>{{ p.spg }}</td>
+                    <td>{{ p.bpg }}</td>
+                    <td>{{ p.tov }}</td>
+                    
+                    <td class="{% if p.fg_pct >= 50 %}pct-good{% elif p.fg_pct < 40 %}pct-bad{% endif %}">
+                        {{ p.fg_pct_fmt }}
+                    </td>
+
+                    <td class="{% if p.three_pct >= 40 %}pct-good{% elif p.three_pct < 30 %}pct-bad{% endif %}">
+                        {{ p.three_pct_fmt }}
+                    </td>
+
+                    <td class="{% if p.ft_pct >= 85 %}pct-good{% elif p.ft_pct < 70 %}pct-bad{% endif %}">
+                        {{ p.ft_pct_fmt }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#statsTable').DataTable({
+            "order": [[ 4, "desc" ]], // Sort by PTS (Column 4) by default
+            "pageLength": 25,
+            "lengthChange": false,
+            "info": false
+        });
+    });
+</script>
+{% endblock %}

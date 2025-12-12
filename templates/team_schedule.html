@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ team.name }} Schedule{% endblock %}
+
+{% block content %}
+<style>
+    .schedule-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #fff;
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        margin-bottom: 25px;
+    }
+    
+    .team-info-block { display: flex; align-items: center; gap: 15px; }
+    .team-logo-lg { width: 60px; height: 60px; object-fit: contain; }
+    
+    .game-list { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
+    .game-row { 
+        display: grid; 
+        grid-template-columns: 100px 80px 1fr 100px 120px; 
+        align-items: center; 
+        padding: 15px; 
+        border-bottom: 1px solid #f3f4f6; 
+        font-size: 14px;
+    }
+    .game-row:last-child { border-bottom: none; }
+    .game-row:hover { background: #f9fafb; }
+    
+    .date-col { color: #6b7280; font-weight: 500; font-size: 13px; }
+    .opp-col { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+    .opp-logo { width: 25px; height: 25px; object-fit: contain; }
+    
+    .win-badge { color: #059669; font-weight: 700; background: #d1fae5; padding: 4px 8px; border-radius: 6px; display: inline-block; text-align: center; font-size: 12px; }
+    .loss-badge { color: #dc2626; font-weight: 700; background: #fee2e2; padding: 4px 8px; border-radius: 6px; display: inline-block; text-align: center; font-size: 12px; }
+    .pending-badge { color: #6b7280; background: #f3f4f6; padding: 4px 8px; border-radius: 6px; font-size: 12px; }
+
+    /* Dropdown styling */
+    .team-select {
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid #d1d5db;
+        font-size: 14px;
+        background-color: #f9fafb;
+        color: #374151;
+        outline: none;
+    }
+</style>
+
+<div class="schedule-header">
+    <div class="team-info-block">
+        <img src="{{ team.logo_url }}" class="team-logo-lg">
+        <div>
+            <h1 style="margin: 0; font-size: 24px;">{{ team.city }} {{ team.name }}</h1>
+            <div style="color: #6b7280; margin-top: 5px;">Season Record: <span style="font-weight: 700; color: #111827;">{{ team.record }}</span></div>
+        </div>
+    </div>
+    
+    <div>
+        <label style="font-size: 12px; color: #6b7280; display: block; margin-bottom: 4px;">View Other Team</label>
+        <select class="team-select" onchange="window.location.href='/team_schedule/' + this.value">
+            {% for t in all_teams_list %}
+                <option value="{{ t.team_id }}" {% if t.team_id == team.team_id %}selected{% endif %}>
+                    {{ t.city }} {{ t.name }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<div class="game-list">
+    <div class="game-row" style="background: #f3f4f6; font-weight: 600; color: #4b5563; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+        <div>Date</div>
+        <div>Loc</div>
+        <div>Opponent</div>
+        <div>Result</div>
+        <div>Links</div>
+    </div>
+    
+    {% for g in games %}
+    <div class="game-row">
+        <div class="date-col">
+            {{ g.month_name[:3] }} {{ g.day_of_month }}
+        </div>
+        
+        <div style="font-weight: 600; color: #6b7280;">
+            {% if g.is_home %}vs{% else %}@{% endif %}
+        </div>
+        
+        <div class="opp-col">
+            <img src="{{ g.opp_logo }}" class="opp-logo">
+            <a href="/team_schedule/{{ g.home_team_id if not g.is_home else g.away_team_id }}" style="text-decoration:none; color:inherit;">
+                {{ g.opp_name }}
+            </a>
+        </div>
+        
+        <div>
+            {% if g.is_played %}
+                <span class="{{ g.result_class }}">{{ g.result_display }}</span>
+            {% else %}
+                <span class="pending-badge">Upcoming</span>
+            {% endif %}
+        </div>
+        
+        <div>
+            {% if g.is_played %}
+                <a href="/boxscore/{{ g.game_id }}" style="color: var(--accent); font-weight: 500; font-size: 13px;">Box Score</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}

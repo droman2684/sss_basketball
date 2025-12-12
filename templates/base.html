@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Basketball Sim{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+
+    <style>
+        /* --- MODERN RESET & VARIABLES --- */
+        :root {
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --accent: #2563eb; /* Royal Blue */
+            --accent-hover: #1d4ed8;
+            --border-color: #e5e7eb;
+            --sidebar-bg: #ffffff;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-primary); display: flex; height: 100vh; overflow: hidden; }
+        a { text-decoration: none; color: inherit; transition: 0.2s; }
+        ul { list-style: none; padding: 0; margin: 0; }
+
+        /* --- LAYOUT --- */
+        .app-container { display: flex; width: 100%; height: 100%; }
+        
+        /* Main Content Scrollable Area */
+        .content-area { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; }
+
+        /* Top Header */
+        .top-nav {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky; top: 0; z-index: 100;
+        }
+        .league-title { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+        .league-meta { font-size: 13px; color: var(--text-secondary); margin-left: 10px; font-weight: 400; }
+
+        /* Page Container */
+        .page-content { padding: 30px; max-width: 1400px; margin: 0 auto; width: 100%; }
+
+        /* --- UNIVERSAL RIGHT SIDEBAR --- */
+        .sidebar-right {
+            width: 260px;
+            background-color: var(--sidebar-bg);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .nav-section { margin-bottom: 25px; }
+        .nav-header { 
+            font-size: 11px; 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+            color: var(--text-secondary); 
+            font-weight: 700; 
+            margin-bottom: 10px; 
+        }
+        
+        .nav-link {
+            display: block;
+            padding: 8px 12px;
+            margin-bottom: 4px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        .nav-link:hover { background-color: #f9fafb; color: var(--accent); }
+        .nav-link.active { background-color: #eff6ff; color: var(--accent); }
+
+        /* League Switcher Dropdown Style */
+        .league-switcher {
+            background: #f9fafb;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+        .league-switcher a { display: block; padding: 5px; color: var(--text-secondary); }
+        .league-switcher a:hover { color: var(--text-primary); }
+        .league-switcher strong { display: block; margin-bottom: 5px; color: var(--text-primary); }
+
+        /* --- COMPONENT STYLES --- */
+        
+        /* Cards */
+        .card { background: var(--card-bg); border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid var(--border-color); padding: 20px; margin-bottom: 20px; }
+        .card-header { font-size: 16px; font-weight: 600; margin-bottom: 15px; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; display: flex; justify-content: space-between; }
+
+        /* Buttons */
+        .btn { display: inline-block; padding: 10px 16px; border-radius: 6px; font-weight: 600; font-size: 14px; cursor: pointer; border: none; transition: 0.2s; }
+        .btn-primary { background-color: var(--accent); color: white; }
+        .btn-primary:hover { background-color: var(--accent-hover); }
+        .btn-success { background-color: var(--success); color: white; }
+        .btn-success:hover { filter: brightness(90%); }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { text-align: left; color: var(--text-secondary); font-weight: 600; padding: 10px; border-bottom: 1px solid var(--border-color); background: #f9fafb; }
+        td { padding: 12px 10px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background-color: #f9fafb; }
+        
+        .user-highlight { background-color: #eff6ff !important; font-weight: 600; border-left: 3px solid var(--accent); }
+        
+        /* Grid Layouts */
+        .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; }
+
+        /* --- DATATABLES OVERRIDES --- */
+        /* This fixes the clumped pagination buttons globally */
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            padding: 5px 12px !important;
+            margin-left: 5px !important;
+            border-radius: 6px !important;
+            border: 1px solid #e5e7eb !important;
+            background: white !important;
+            color: #374151 !important;
+            font-size: 13px !important;
+            cursor: pointer !important;
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+            background: var(--accent) !important;
+            color: white !important;
+            border-color: var(--accent) !important;
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+            background: #f3f4f6 !important;
+            color: black !important;
+            border-color: #d1d5db !important;
+        }
+        .dataTables_length, .dataTables_filter {
+            margin-bottom: 15px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        table.dataTable.no-footer { border-bottom: 1px solid #e5e7eb; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <div class="content-area">
+            <div class="top-nav">
+                <div>
+                    <span class="league-title">{% if league %}{{ league.name }}{% else %}Basketball Sim{% endif %}</span>
+                    <span class="league-meta">{% if league %}Season {{ league.season_year }} | {{ league.sim_date }}{% endif %}</span>
+                </div>
+                <div>
+                    </div>
+            </div>
+
+            <div class="page-content">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+
+        <div class="sidebar-right">
+            
+            <div class="league-switcher">
+                <strong>Current League</strong>
+                {% if league %}{{ league.name }}{% else %}None Selected{% endif %}
+                <hr style="border:0; border-top:1px solid #eee; margin:8px 0;">
+                {% if all_leagues %}
+                    {% for l in all_leagues %}
+                        {% if league and l.league_id != league.league_id %}
+                            <a href="/dashboard/{{ l.league_id }}">Switch to: {{ l.name }}</a>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                <a href="/create_league" style="color:var(--accent); font-weight:500; margin-top:5px;">+ New League</a>
+            </div>
+
+            {% if league %}
+            <div class="nav-section">
+                <div class="nav-header">League</div>
+                <a href="/dashboard/{{ league.league_id }}" class="nav-link active">Dashboard</a>
+                <a href="{{ url_for('league_schedule', league_id=league.league_id) }}" class="nav-link">Schedule</a>
+                <a href="{{ url_for('league_standings', league_id=league.league_id) }}" class="nav-link">Standings</a>
+                <a href="{{ url_for('league_stats', league_id=league.league_id) }}" class="nav-link">League Stats</a>
+                <a href="{{ url_for('transactions') }}" class="nav-link">Transactions</a>
+                <a href="{{ url_for('playoffs_view', league_id=league.league_id) }}" class="nav-link">Playoffs</a>
+                <a href="{{ url_for('league_history', league_id=league.league_id) }}" class="nav-link">League History</a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-header">My Team</div>
+                <a href="{{ url_for('coach_strategy') }}" class="nav-link">Strategy</a>
+                <a href="{{ url_for('depth_chart') }}" class="nav-link">Depth Chart</a>
+                <a href="{{ url_for('my_team_stats') }}" class="nav-link">Team Stats</a>
+                <a href="{{ url_for('trade_block') }}" class="nav-link">Trade Block</a>
+               <a href="{{ url_for('free_agency') }}" class="nav-link">Free Agency</a>
+               <a href="{{ url_for('finances') }}" class="nav-link">Finances</a>
+               {% if session.get('user_team_id') %}
+        <a href="{{ url_for('team_schedule', team_id=session.get('user_team_id')) }}" class="nav-link">Team Schedule</a>
+    {% endif %}
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-header">Commissioner</div>
+                <a href="#" class="nav-link">League Settings</a>
+                <a href="#" class="nav-link">Edit Players</a>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+</body>
+</html>

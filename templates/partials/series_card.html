@@ -1,0 +1,16 @@
+<div class="series-card {% if s.winner_team_id %}winner{% endif %}">
+    <div class="team-row">
+        <div class="team-info">
+            <img src="{{ s.t1_logo }}" class="team-logo" style="width:20px; height:20px; object-fit:contain;">
+            <span {% if s.winner_team_id == s.team1_id %}style="font-weight:700;"{% endif %}>{{ s.t1_abv }}</span>
+        </div>
+        <div class="score-badge">{{ s.team1_wins }}</div>
+    </div>
+    <div class="team-row">
+        <div class="team-info">
+            <img src="{{ s.t2_logo }}" class="team-logo" style="width:20px; height:20px; object-fit:contain;">
+            <span {% if s.winner_team_id == s.team2_id %}style="font-weight:700;"{% endif %}>{{ s.t2_abv }}</span>
+        </div>
+        <div class="score-badge">{{ s.team2_wins }}</div>
+    </div>
+</div>

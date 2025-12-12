@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+
+{% block title %}Team Finances{% endblock %}
+
+{% block content %}
+<style>
+    .finance-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+    
+    /* Cap Space Bars */
+    .outlook-card { background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #e5e7eb; margin-bottom: 20px; }
+    .year-row { display: flex; align-items: center; margin-bottom: 15px; }
+    .year-label { width: 60px; font-weight: 700; color: #374151; font-size: 14px; }
+    .progress-container { flex-grow: 1; background: #f3f4f6; height: 24px; border-radius: 6px; margin: 0 15px; position: relative; overflow: hidden; }
+    .progress-bar { height: 100%; transition: width 0.5s ease-in-out; }
+    .cap-info { width: 140px; text-align: right; font-size: 13px; color: #6b7280; font-family: monospace; }
+    
+    /* Table Styles */
+    .contract-table td { vertical-align: middle; }
+    .salary-val { font-family: monospace; font-weight: 600; color: #111827; }
+    .expires-tag { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #eee; color: #666; }
+    .expires-soon { background: #fef3c7; color: #d97706; } /* Warning color for 1 year left */
+
+    /* Modal */
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+    .modal-content { background-color: #fff; margin: 10% auto; padding: 25px; border-radius: 12px; width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+</style>
+
+<div class="page-header" style="margin-bottom: 20px;">
+    <h1>Team Finances</h1>
+    <p style="color: #6b7280;">Manage salary cap, view payroll obligations, and extend contracts.</p>
+</div>
+
+<div class="finance-grid">
+    
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <div class="card-header" style="padding: 15px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+            Active Contracts
+        </div>
+        <table class="contract-table">
+            <thead>
+                <tr>
+                    <th style="padding-left: 20px;">Player</th>
+                    <th>Age</th>
+                    <th>Rating</th>
+                    <th>Salary</th>
+                    <th>Years Left</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in roster %}
+                <tr>
+                    <td style="padding-left: 20px;">
+                        <div style="font-weight: 600;">{{ p.first_name }} {{ p.last_name }}</div>
+                        <div style="font-size: 12px; color: #6b7280;">{{ p.position }}</div>
+                    </td>
+                    <td>{{ p.age }}</td>
+                    <td><span style="background:#333; color:#fff; padding:2px 6px; border-radius:4px; font-size:12px;">{{ p.overall_rating }}</span></td>
+                    <td class="salary-val">{{ p.salary_fmt }}</td>
+                    <td>
+                        {% if p.contract_years == 1 %}
+                            <span class="expires-tag expires-soon">Expiring</span>
+                        {% else %}
+                            <span class="expires-tag">{{ p.contract_years }} Yrs</span>
+                        {% endif %}
+                    </td>
+                    <td>
+    <button class="btn btn-sm btn-primary" 
+            onclick="openExtensionModal('{{ p.player_id }}', '{{ p.last_name }}', {{ p.asking_price }}, {{ p.target_years }})">
+        Extend
+    </button>
+</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div>
+        <div class="outlook-card">
+            <h3 style="margin-top: 0; font-size: 16px; margin-bottom: 20px;">3-Year Cap Outlook</h3>
+            
+            {% for key, data in outlook.items() %}
+            <div class="year-row">
+                <div class="year-label">{{ data.year }}</div>
+                <div class="progress-container">
+                    <div class="progress-bar" style="width: {{ data.pct }}%; background-color: {{ data.color }};"></div>
+                </div>
+                <div class="cap-info">
+                    Used: {{ data.committed_fmt }}<br>
+                    <span style="color: {{ data.color }}; font-weight: 600;">{{ data.space_fmt }} Space</span>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+                * Projecting a 5% Salary Cap increase per season. "Space" indicates estimated room for Free Agents.
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div id="extensionModal" class="modal">
+    <div class="modal-content">
+        <h2 id="modalTitle" style="margin-top: 0; margin-bottom: 5px;">Extend Player</h2>
+        
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 10px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; text-align: center;">
+            <strong>Target Contract:</strong> <span id="targetDisplay">Loading...</span>
+        </div>
+
+        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px;">Offer Salary (Per Year)</label>
+        <div style="display: flex; align-items: center; margin-bottom: 15px;">
+            <span style="font-size: 18px; color: #666; margin-right: 5px;">$</span>
+            <input type="number" id="extSalary" class="form-control" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px;">
+        </div>
+
+        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 5px;">Offer Years (Added)</label>
+        <select id="extYears" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 20px;">
+            <option value="1">1 Year</option>
+            <option value="2">2 Years</option>
+            <option value="3">3 Years</option>
+            <option value="4">4 Years</option>
+            <option value="5">5 Years</option>
+        </select>
+
+        <div id="extFeedback" style="padding: 15px; background: #f9fafb; border-left: 4px solid #ccc; margin-bottom: 20px; font-style: italic; font-size: 14px; color: #4b5563; min-height: 50px; display: flex; align-items: center;">
+            Agent: "Make us an offer."
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button onclick="closeModal()" class="btn" style="background: #e5e7eb; color: #374151;">Cancel</button>
+            <button onclick="submitExtension()" class="btn btn-success">Submit Offer</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let activePlayerId = null;
+
+    function openExtensionModal(id, name, asking, targetYears) {
+        activePlayerId = id;
+        document.getElementById('modalTitle').innerText = "Extend " + name;
+        
+        // Populate Target Display
+        const askingM = (asking / 1000000).toFixed(1);
+        document.getElementById('targetDisplay').innerText = `$${askingM}M / ${targetYears} Years`;
+        
+        // Pre-fill Inputs
+        document.getElementById('extSalary').value = asking;
+        document.getElementById('extYears').value = targetYears;
+        
+        // Reset Feedback
+        const feedback = document.getElementById('extFeedback');
+        feedback.innerText = 'Agent: "Make us a fair offer based on the target above."';
+        feedback.style.color = "#4b5563";
+        feedback.style.borderLeftColor = "#ccc";
+        feedback.style.background = "#f9fafb";
+
+        document.getElementById('extensionModal').style.display = "block";
+    }
+
+    function closeModal() {
+        document.getElementById('extensionModal').style.display = "none";
+    }
+
+    function submitExtension() {
+        const salary = document.getElementById('extSalary').value;
+        const years = document.getElementById('extYears').value;
+        const feedback = document.getElementById('extFeedback');
+        
+        feedback.innerText = 'Agent: "Reviewing..."';
+
+        fetch('/extend_player', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ player_id: activePlayerId, salary: salary, years: years })
+        })
+        .then(res => res.json())
+        .then(data => {
+            feedback.innerText = data.message;
+            
+            if (data.success) {
+                // Success State
+                feedback.style.color = "#065f46"; // Dark Green
+                feedback.style.background = "#d1fae5"; // Light Green
+                feedback.style.borderLeftColor = "#10b981";
+                feedback.style.fontWeight = "600";
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                // Rejection State
+                feedback.style.color = "#991b1b"; // Dark Red
+                feedback.style.background = "#fee2e2"; // Light Red
+                feedback.style.borderLeftColor = "#ef4444";
+            }
+        });
+    }
+
+    // Close modal if clicking outside
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('extensionModal')) {
+            closeModal();
+        }
+    }
+</script>
+{% endblock %}

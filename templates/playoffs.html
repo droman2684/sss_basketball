@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+{% block title %}Playoffs{% endblock %}
+
+{% block content %}
+<style>
+    /* BRACKET CSS */
+    .bracket-container {
+        display: flex;
+        justify-content: center;
+        padding: 40px 0;
+        overflow-x: auto;
+        background: #f8fafc;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .conference-side {
+        display: flex;
+        gap: 30px;
+    }
+    
+    .round-column {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-around;
+        width: 160px;
+    }
+    
+    .series-card {
+        background: white;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        position: relative;
+        margin: 10px 0;
+        font-size: 12px;
+    }
+    
+    .series-card.winner { border-color: #10b981; }
+    
+    .team-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 0;
+    }
+    
+    .team-info { display: flex; align-items: center; gap: 8px; }
+    .team-logo { width: 20px; height: 20px; object-fit: contain; }
+    .score-badge { 
+        font-weight: bold; 
+        background: #f1f5f9; 
+        padding: 2px 6px; 
+        border-radius: 4px;
+        min-width: 20px;
+        text-align: center;
+    }
+    
+    .finals-column {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        margin: 0 40px;
+    }
+    
+    .finals-card {
+        width: 200px;
+        border: 2px solid #fbbf24;
+        padding: 15px;
+        text-align: center;
+    }
+    
+    /* Connectors (Simple lines) */
+    .connector { height: 1px; background: #cbd5e1; width: 15px; }
+
+    /* Controls at bottom */
+    .controls-area { margin-top: 30px; }
+    .matchup-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+</style>
+
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:center;">
+    <h1>{{ league.season_year }} Playoffs</h1>
+    {% if not active_series and not bracket.Finals %}
+        <a href="/init_playoffs/{{ league.league_id }}" class="btn btn-primary">Start Playoffs</a>
+    {% endif %}
+</div>
+
+{% if bracket.West[1] %}
+<div class="bracket-container">
+    
+    <div class="conference-side">
+        <div class="round-column">
+            {% for s in bracket.West[1] %}
+                {% include 'partials/series_card.html' %}
+            {% endfor %}
+        </div>
+        <div class="round-column">
+            {% for s in bracket.West[2] %}
+                {% include 'partials/series_card.html' %}
+            {% endfor %}
+        </div>
+        <div class="round-column">
+            {% for s in bracket.West[3] %}
+                {% include 'partials/series_card.html' %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="finals-column">
+        {% if bracket.Finals %}
+            <div class="series-card finals-card">
+                <div style="font-weight:800; margin-bottom:10px; color:#d97706;">NBA FINALS</div>
+                {% with s = bracket.Finals[0] %}
+                    {% include 'partials/series_card.html' %}
+                {% endwith %}
+            </div>
+        {% else %}
+            <div style="color:#94a3b8; font-weight:600;">Waiting for Finals...</div>
+        {% endif %}
+    </div>
+
+    <div class="conference-side">
+        <div class="round-column">
+            {% for s in bracket.East[3] %}
+                {% include 'partials/series_card.html' %}
+            {% endfor %}
+        </div>
+        <div class="round-column">
+            {% for s in bracket.East[2] %}
+                {% include 'partials/series_card.html' %}
+            {% endfor %}
+        </div>
+        <div class="round-column">
+            {% for s in bracket.East[1] %}
+                {% include 'partials/series_card.html' %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="controls-area">
+    <h3>Active Series</h3>
+    <div class="matchup-grid">
+        {% for s in active_series %}
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px; font-weight:600;">
+                <span>{{ s.series_label }}</span>
+                <span style="color:#64748b;">{{ s.team1_wins }} - {{ s.team2_wins }}</span>
+            </div>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <div style="text-align:center;">
+                    <img src="{{ s.t1_logo }}" style="width:50px;">
+                    <div>{{ s.t1_abv }}</div>
+                </div>
+                <div style="font-weight:bold; color:#cbd5e1; font-size:20px;">VS</div>
+                <div style="text-align:center;">
+                    <img src="{{ s.t2_logo }}" style="width:50px;">
+                    <div>{{ s.t2_abv }}</div>
+                </div>
+            </div>
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <form action="{{ url_for('sim_single_playoff_game', series_id=s.series_id) }}" method="POST">
+                    <button type="submit" class="btn btn-primary" style="width:100%;">Sim Next Game</button>
+                </form>
+                <form action="{{ url_for('sim_playoff_series', series_id=s.series_id) }}" method="POST">
+                    <button type="submit" class="btn" style="width:100%; background:#334155; color:white;">Sim Series</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% if champion %}
+<div style="margin-top: 50px; text-align: center; background: linear-gradient(135deg, #fef9c3 0%, #fef08a 100%); padding: 40px; border-radius: 12px; border: 2px solid #eab308; box-shadow: 0 10px 25px rgba(234, 179, 8, 0.2);">
+   <img src="{{ url_for('static', filename='trophy.png') }}" style="height: 150px; margin-bottom: 20px;">
+    <h1 style="color: #854d0e; font-size: 16px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px;">{{ league.season_year }} NBA Champions</h1>
+    <div style="font-size: 42px; font-weight: 800; color: #000; display: flex; align-items: center; justify-content: center; gap: 15px;">
+        <img src="{{ champion.logo_url }}" style="height: 60px;">
+        {{ champion.city }} {{ champion.name }}
+    </div>
+    <div style="margin-top: 20px;">
+        <a href="/champions_history/{{ league.league_id }}" class="btn" style="background: #854d0e; color: white;">View History</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

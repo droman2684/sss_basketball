@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ team.city }} {{ team.name }} - Home{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+
+<style>
+    .team-header {
+        background: #fff; padding: 30px; border-radius: 12px; border: 1px solid var(--border-color);
+        margin-bottom: 30px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .team-info { display: flex; align-items: center; gap: 20px; }
+    .team-logo { width: 80px; height: 80px; object-fit: contain; }
+    .team-title h1 { margin: 0; font-size: 32px; color: var(--text-primary); }
+    .team-record { font-size: 18px; color: var(--text-secondary); margin-top: 5px; }
+    .rank-badge { 
+        background: var(--accent); color: white; padding: 5px 15px; 
+        border-radius: 20px; font-weight: 700; font-size: 14px; text-transform: uppercase;
+    }
+    .rating-box { font-weight: 700; padding: 2px 6px; border-radius: 4px; font-size: 12px; color: white; }
+    .r-A { background-color: #10b981; } .r-B { background-color: #3b82f6; } .r-C { background-color: #f59e0b; } .r-D { background-color: #ef4444; }
+</style>
+
+<div class="team-header">
+    <div class="team-info">
+        <img src="{{ team.logo_url }}" alt="Logo" class="team-logo">
+        <div class="team-title">
+            <h1>{{ team.city }} {{ team.name }}</h1>
+            <div class="team-record">
+                {{ team.wins }}-{{ team.losses }} | {{ team.conference }}ern Conference
+            </div>
+        </div>
+    </div>
+    <div style="text-align: right;">
+        <div class="rank-badge">#{{ rank }} in {{ team.conference }}</div>
+        <div style="margin-top:10px; font-size:13px; color:#888;">{{ team.division }} Division</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Roster & Stats</div>
+    <div style="overflow-x: auto;">
+        <table id="rosterTable" class="table table-striped" style="width:100%">
+            <thead>
+                <tr>
+                    <th>Name</th><th>Pos</th><th>Age</th><th>OVR</th><th>VAA</th>
+                    <th>PPG</th><th>RPG</th><th>APG</th><th>+/-</th><th>Contract</th><th>Salary</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in roster %}
+                <tr>
+                    <td><strong>{{ p.last_name }}</strong>, {{ p.first_name }}</td>
+                    <td>{{ p.position }}</td>
+                    <td>{{ p.age }}</td>
+                    <td><span class="rating-box {% if p.overall_rating >= 90 %}r-A{% elif p.overall_rating >= 80 %}r-B{% elif p.overall_rating >= 70 %}r-C{% else %}r-D{% endif %}">{{ p.overall_rating }}</span></td>
+                    
+                    <td style="font-weight:bold; color: {% if p.vaa_val > 0 %}green{% else %}red{% endif %};">{{ p.vaa }}</td>
+                    
+                    <td>{{ p.ppg }}</td>
+                    <td>{{ p.rpg }}</td>
+                    <td>{{ p.apg }}</td>
+                    <td style="color: {% if p.pm|float > 0 %}green{% elif p.pm|float < 0 %}red{% else %}gray{% endif %};">{{ p.pm }}</td>
+                    <td>{{ p.contract_years }} yrs</td>
+                    <td data-order="{{ p.salary_val }}">{{ p.salary_fmt }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#rosterTable').DataTable({
+            "order": [[ 4, "desc" ]],
+            "pageLength": 15,
+            "lengthChange": false,
+            "info": false
+        });
+    });
+</script>
+{% endblock %}
